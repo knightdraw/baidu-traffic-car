@@ -242,7 +242,7 @@ if __name__ == "__main__":
 
             # === 配置文心一言 API ===
             erniebot.api_type = "aistudio"
-            erniebot.access_token = "4fe6345ddee61d1c8eacfa3cfab8d5e6d2272e54"  # ✅ 替换为你的 access_token
+            erniebot.access_token = ""  # ✅ 替换为你的 access_token
 
             # === 调用大模型 ===
             response = erniebot.ChatCompletion.create(
