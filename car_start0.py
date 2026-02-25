@@ -6,7 +6,7 @@ import os
 import numpy as np
 from task_func import MyTask
 from log_info import logger
-from car_wrap import MyCar
+from car_wrap import MyCarf
 from tools import CountRecord
 #from camera.base.camera import P_Show_IMG  ###
 from ernie_bot.base.ernie_bot_wrap import ImageVisionPrompt  ###
@@ -413,7 +413,7 @@ if __name__ == "__main__":
 
         # === 配置文心一言 API ===
         erniebot.api_type = "aistudio"
-        erniebot.access_token = "4fe6345ddee61d1c8eacfa3cfab8d5e6d2272e54"  # ✅ 替换为你的 access_token
+        erniebot.access_token = ""  # ✅ 替换为你的 access_token
         print( erniebot.Model.list())
 
         # === 调用大模型 ===
@@ -457,8 +457,8 @@ if __name__ == "__main__":
         # 图像处理部分
         image_prompt = ImageVisionPrompt(
            cap=my_car.cap_side,
-           imgbb_api_key="9e75a9d625b4a2c802248c0856979d14",
-           ernie_access_token="bce-v3/ALTAK-Za20WVscPby5UMzmlvfaF/229818f85aaf18472594dd29d291acd78d9bc36b"
+           imgbb_api_key="",
+           ernie_access_token=""
         )
         '''
         '''
