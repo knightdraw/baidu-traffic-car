@@ -1,7 +1,7 @@
 
 import erniebot
 erniebot.api_type = 'aistudio'
-erniebot.access_token = '4fe6345ddee61d1c8eacfa3cfab8d5e6d2272e54'
+erniebot.access_token = 'e8bbac20279d0f40945607bf857bd89236771bc4'
 messages=[{'role': 'user', 'content': '''“这个水果是苹果,id记录为123456, 价格是5人民币每500克”, 请根据我的描述生成一段json结果,json数据参考如下的jsonschema的描述。
       ```{ "title": "Product",
       "description": "一个商品的目录",

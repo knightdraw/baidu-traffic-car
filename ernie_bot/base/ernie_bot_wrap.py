@@ -1,11 +1,5 @@
 # -*- coding: utf-8 -*-
 import erniebot, json
-import os ###
-import requests ###
-import uuid ###
-import cv2 ###
-from camera.base.camera import Camera ###
-from openai import OpenAI
 from jsonschema import validate
 
 
@@ -163,6 +157,29 @@ class HumAttrPrompt(PromptJson):
 				'''
 		return example
 
+class EduCounselerPrompt(PromptJson):
+	def __init__(self) -> None:
+		rulers = '''你是一个人中小学指导程序，需要根据描述的题目，逐步进行推理，根据给出的选项选择出正确答案的json结果。
+					严格按照下面的scheame描述生成给定格式json，只返回json数据:
+				'''
+		super().__init__(rulers)
+	
+	def json_obj(self)->dict:
+		schema_edu = {
+						"type": "object", "required": ['answer', 'analysis'],
+						"properties": {
+							"analysis":{'type':"string", "description":"题目分析的具体过程,分析的过程少于20字"},
+							"answer": {'enum': ['A', 'B', 'C', "D"], "description": "答案选项中的一个"}
+						},
+						"additionalProperties": False
+            		 }
+		return schema_edu
+	
+	def example(self)->str:
+		example = '''正确的示例如下：
+					题目: 1+1=？, 答案选项有: A.4 B.44 C.7 D.2 ```{"description":"1+1的结果是2,其中选项D和答案一致,所以选D",'answer': 'D'}``` ,
+					题目: 1+2=？, 答案选项有: A.3 B.44 C.6 D.2: ```{"description":"1+2的结果是3,其中选项A和答案一致,所以选A",'answer': 'A'}``` 。'''
+		return example
 	
 class ErnieBotWrap():
 
@@ -284,179 +301,6 @@ class ErnieBotWrap():
 			return obj_json
 		else:
 			return None
-
-
-
-class ImageVisionPrompt:  ###
-    def __init__(self, cap, imgbb_api_key: str, ernie_access_token: str, model: str = "ernie-4.5-turbo-vl-32k"):
-        """
-        cap: Camera类实例，具有 read() 方法
-        imgbb_api_key: imgbb 图床的 API key
-        ernie_access_token: 百度文心 access_token
-        model: 默认使用多模态大模型 ernie-4.5-vl
-        """
-        self.cap = cap
-        self.imgbb_key = imgbb_api_key
-        self.ernie_key = ernie_access_token
-        self.model = model
-
-    def capture_and_upload(self) -> str:
-        """拍照、保存、上传并返回图床URL"""
-        image = self.cap.read()
-        tmp_filename = f"tmp_{uuid.uuid4().hex[:8]}.jpg"
-        tmp_path = os.path.join(".", tmp_filename)
-        cv2.imwrite(tmp_path, image)
-
-        try:
-            # 上传图片
-            with open(tmp_path, "rb") as file:
-                res = requests.post(
-                    "https://api.imgbb.com/1/upload",
-                    params={"key": self.imgbb_key},
-                    files={"image": file}
-                )
-            url = res.json()["data"]["url"]
-            return url
-        finally:
-            # 删除临时文件
-            if os.path.exists(tmp_path):
-                os.remove(tmp_path)
-
-    def infer_image(self, prompt: str = "请分析这张图片") -> str:
-        """调用文心一言多模态模型进行图文推理"""
-        image_url = self.capture_and_upload()
-
-        client = OpenAI(
-            base_url="https://aip.baidubce.com/v1",
-            api_key=self.ernie_key
-        )
-
-        response = client.chat.completions.create(
-            model=self.model,
-            messages=[
-                {
-                    "role": "user",
-                    "content": [
-                        {"type": "text", "text": prompt},
-                        {"type": "image_url", "image_url": {"url": image_url}}
-                    ]
-                }
-            ],
-            temperature=0.7,
-            top_p=0.9
-        )
-
-        return response.jet("result")
-
-
-
-#BMI,新加
-class BMIPrompt(PromptJson):
-	def __init__(self) -> None:
-		rulers = '''你是一个BMI分析程序，需要根据提供的体检数据计算BMI值并分类。
-					严格按照下面的schema描述生成JSON结果，只返回数值和分类，不要解释性文本:
-				'''
-		super().__init__(rulers)
-
-	def json_obj(self) -> dict:
-		"""
-		BMI分类标准：
-		- <18.5: 营养不良
-		- 18.5-24: 健康
-		- 24-28: 超重
-		- >28: 肥胖
-		"""
-		schema_bmi = {
-			"type": "object",
-			"required": ["bmi", "category"],
-			"properties": {
-				"height": {
-					"type": "number",
-					"description": "身高(单位:厘米)",
-					"minimum": 50,
-					"maximum": 250
-				},
-				"weight": {
-					"type": "number",
-					"description": "体重(单位:kg)",
-					"minimum": 10,
-					"maximum": 300
-				},
-				"bmi": {
-					"type": "number",
-					"description": "计算得到的BMI值",
-					"minimum": 10,
-					"maximum": 50
-				},
-				"category": {
-					"enum": ["营养不良", "健康", "超重", "肥胖"],
-					"description": "BMI分类结果"
-				},
-				"advice": {
-					"type": "string",
-					"description": "健康建议(可选)"
-				}
-			},
-			"additionalProperties": False
-		}
-		return schema_bmi
-
-	def example(self) -> str:
-		example = '''正确的示例如下：
-					输入: 身高1.75米，体重70kg → ```{"height":1.75, "weight":70, "bmi":22.86, "category":"健康"}```
-					输入: 身高1.65米，体重90kg → ```{"height":1.65, "weight":90, "bmi":33.06, "category":"肥胖"}```
-					输入: 身高1.8米，体重50kg → ```{"height":1.8, "weight":50, "bmi":15.43, "category":"营养不良"}```
-				'''
-		return example
-
-bmi_calculator = BMIPrompt()
-
-# 计算一个人的BMI
-# result = bmi_calculator.calculate_bmi(height=1.75, weight=70)
-# print(result)
-# 输出: {'height': 1.75, 'weight': 70, 'bmi': 22.86, 'category': '健康'}
-
-# 获取JSON schema
-print(bmi_calculator.json_obj())
-
-# 获取示例
-print(bmi_calculator.example())
-
-### 做题目，新加
-
-class EduCounselerPrompt(PromptJson):
-    def __init__(self) -> None:
-        rulers = '''你是一个中小学解题程序，需要根据题目描述：
-1. 先写出详细的解题步骤（分步骤说明计算过程，比如“第一步：计算总价；第二步：判断是否满足优惠条件”）；
-2. 根据计算结果从选项中选择正确答案；
-3. 严格按照下方 schema 生成 JSON 格式的结果，**只返回 JSON 数据**，不要包含其他内容。'''
-        super().__init__(rulers)
-
-    def json_obj(self) -> dict:
-        # 新增 analysis 字段存储解题步骤，保留 answer 字段存储答案
-        return {
-            "type": "object",
-            "required": ["analysis", "answer"],  # 必须包含解题步骤和答案
-            "properties": {
-                "analysis": {
-                    "type": "string",
-                    "description": "详细的解题步骤，分步骤说明计算过程，例如：1. 计算商品总价；2. 判断是否满足优惠条件..."
-                },
-                "answer": {
-                    "enum": ["A", "B", "C", "D"],
-                    "description": "正确答案对应的选项字母"
-                }
-            },
-            "additionalProperties": False
-        }
-
-    def example(self) -> str:
-        # 增加更多详细的示例，特别是包含优惠计算的示例
-        example = '''
-        "analysis": "1. 计算商品总价：60 + 70 = 130元；2. 判断优惠：满100减20，130元满足条件；3. 计算最终价格：130 - 20 = 110元",
-  "answer": "A"
-        '''
-        return example
 
 def test():
 	res = '''```json\n[\n  {\n    "func": "my_light",\n    "count": 3\n  },\n  {\n    "func": "beep",\n    "time_dur": 3  // 假设蜂鸣器持续发声3秒作为紧急警示，具体时长可根据实际情况调整\n  }\n]\n```'''
